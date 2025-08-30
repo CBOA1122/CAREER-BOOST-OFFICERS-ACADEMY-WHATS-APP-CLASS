@@ -1,0 +1,322 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Classroom - Live Tracking</title>
+  <style>
+    :root {
+      --wa-green: #25D366;
+      --wa-dark: #075E54;
+      --bg: #e5ddd5;
+      --chat-bubble-bg: #dcf8c6;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      display: flex;
+      justify-content: center;
+    }
+    .chat-container {
+      width: 100%;
+      max-width: 480px;
+      background-color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background-color: var(--wa-dark);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .chat-box {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .msg {
+      max-width: 85%;
+      padding: 10px 15px;
+      margin: 8px 0;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .teacher {
+      align-self: flex-start;
+      background-color: var(--chat-bubble-bg);
+    }
+    .student {
+      align-self: flex-end;
+      background-color: #fff;
+      border: 1px solid #ddd;
+    }
+    button {
+      background-color: var(--wa-green);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .quiz-options {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .quiz-options input[type="radio"] {
+      margin-right: 5px;
+    }
+    .hidden {
+      display: none;
+    }
+    #student-id-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">CAREER BOOST OFFICERS ACADEMY</div>
+    <div class="chat-box">
+
+      <div id="welcome-msg" class="msg teacher">
+        👋 Welcome! Please enter your unique student ID (e.g., your WhatsApp number) to begin.
+        <br><br>
+        <input type="text" id="student-id-input" placeholder="Your Student ID">
+        <button onclick="saveStudentId()">Start Class</button>
+      </div>
+
+      <div id="classroom-content" class="hidden">
+        <div class="msg teacher">📌 Post: Elementary Teacher (BS-11)</div>
+        <div class="msg teacher">📚 Subject: Pedagogy</div>
+        <div class="msg teacher">📖 Course: Teaching Methods – Lecture 1</div>
+
+        <div class="msg teacher">✅ Please mark your attendance:</div>
+        <div class="msg student"><button onclick="markAttendance()">✅ Present</button></div>
+
+        <div class="msg teacher">📖 Today’s Topic: Introduction to Teaching Methods</div>
+
+        <div class="msg teacher">Here is your lecture material:</div>
+        <div class="msg teacher"><button onclick="showScript()">📑 Read Script</button></div>
+        <div class="msg teacher"><button onclick="translateScript()">🌐 Translate to Urdu</button></div>
+        <div class="msg teacher"><button onclick="playAudio()">🎙️ Listen Voice Explanation</button></div>
+
+        <div id="scriptBox" class="msg teacher hidden"></div>
+        <div id="urduBox" class="msg teacher hidden" style="direction: rtl;"></div>
+
+        <div class="msg teacher">Have you understood? ✅ Done? Any Question?</div>
+        <div class="msg student"><button onclick="showQuiz()">Clear Done ✅</button></div>
+
+        <div id="quizSection" class="msg teacher quiz hidden">
+          📝 Quiz (5 Questions)
+          <form id="quizForm">
+            </form>
+          <button type="button" onclick="checkQuiz()">Submit Quiz</button>
+        </div>
+
+        <div id="resultBox" class="msg teacher hidden"></div>
+
+        <div class="msg teacher">🎉 Congratulations! You have completed the class.</div>
+        <div class="msg student"><button>➡️ Next Lecture</button></div>
+      </div>
+
+    </div>
+  </div>
+  <script>
+    // ** YOUR LIVE API URL FROM FORMSPREE **
+    const API_URL = "https://formspree.io/f/xjkeyjga";
+    
+    // Lecture Content (Dummy)
+    const lectureContent = {
+        post: "Elementary Teacher (BS-11)",
+        subject: "Pedagogy",
+        course: "Teaching Methods – Lecture 1",
+        topic: "Introduction to Teaching Methods",
+        script: "Teaching methods are systematic ways of instruction to help students learn effectively. They guide both teachers and learners. A good teaching method considers the student's learning style, the subject matter, and the teacher's expertise. The project method, for example, is a student-centered approach where students work on a long-term project.",
+        audioLink: "YOUR_PUBLIC_AUDIO_URL.mp3", // Replace with your audio file link
+        quiz: [
+            {
+                question: "What is the primary purpose of teaching methods?",
+                options: ["A) To structure learning", "B) To entertain students", "C) To save time", "D) To test knowledge"],
+                answer: "A",
+                explanation: "Teaching methods are systematic ways of instruction to help students learn effectively by providing a structured framework."
+            },
+            {
+                question: "Which of the following is an example of a student-centered method mentioned?",
+                options: ["A) The Lecture method", "B) The Project method", "C) The Dictation method", "D) The Reading method"],
+                answer: "B",
+                explanation: "The project method is explicitly mentioned as a student-centered approach where students are actively involved in their own learning."
+            }
+        ]
+    };
+
+    let studentId = null;
+
+    function saveStudentId() {
+      studentId = document.getElementById("student-id-input").value;
+      if (studentId) {
+        document.getElementById("welcome-msg").classList.add("hidden");
+        document.getElementById("classroom-content").classList.remove("hidden");
+        // You can send a "start session" event to your backend here if needed.
+      } else {
+        alert("Please enter a valid student ID to continue.");
+      }
+    }
+
+    function sendData(data) {
+        if (!studentId) {
+            alert("Student ID is missing. Please restart the page and enter your ID.");
+            return;
+        }
+
+        const payload = {
+            "Student ID": studentId,
+            "Lecture": lectureContent.course,
+            "Timestamp": new Date().toISOString(),
+            ...data
+        };
+
+        fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (response.ok) {
+                console.log('Data sent successfully!');
+            } else {
+                console.error('Failed to send data:', response.statusText);
+            }
+        }).catch(error => {
+            console.error('Error sending data:', error);
+        });
+    }
+
+    function markAttendance() {
+        sendData({ "Attendance": "Present" });
+        alert("✅ Attendance marked successfully! Your attendance has been recorded.");
+    }
+
+    function showScript() {
+        document.getElementById("scriptBox").innerText = lectureContent.script;
+        document.getElementById("scriptBox").classList.remove("hidden");
+    }
+
+    function translateScript() {
+        // Simple placeholder for translation logic
+        // For a real-world solution, you would call a translation API here
+        const urduTranslation = "تدریسی طریقے طلباء کو مؤثر طریقے سے سیکھنے میں مدد کرنے کے لیے ہدایات کے منظم طریقے ہیں۔ وہ اساتذہ اور سیکھنے والوں دونوں کی رہنمائی کرتے ہیں۔ ایک اچھا تدریسی طریقہ کار طالب علم کے سیکھنے کے انداز، مضمون اور استاد کی مہارت پر غور کرتا ہے۔ مثال کے طور پر، پروجیکٹ کا طریقہ ایک طالب علم پر مرکوز طریقہ ہے جہاں طلباء ایک طویل مدتی منصوبے پر کام کرتے ہیں۔";
+        document.getElementById("urduBox").innerText = urduTranslation;
+        document.getElementById("urduBox").classList.remove("hidden");
+    }
+
+    function playAudio() {
+        const audio = new Audio(lectureContent.audioLink);
+        audio.play().catch(e => alert("Could not play audio. Please ensure the link is correct."));
+    }
+
+    function showQuiz() {
+        const quizForm = document.getElementById("quizForm");
+        quizForm.innerHTML = ""; // Clear existing quiz
+        lectureContent.quiz.forEach((q, index) => {
+            const p = document.createElement("p");
+            p.innerHTML = `<b>${index + 1}. ${q.question}</b><br>`;
+            q.options.forEach(option => {
+                const label = document.createElement("label");
+                label.innerHTML = `<input type="radio" name="q${index}" value="${option.split(")")[0].trim()}"> ${option}<br>`;
+                p.appendChild(label);
+            });
+            quizForm.appendChild(p);
+        });
+        document.getElementById("quizSection").classList.remove("hidden");
+    }
+
+    function checkQuiz() {
+        let score = 0;
+        let totalQuestions = lectureContent.quiz.length;
+        let resultHtml = "📘 Answer Key with Explanations:<br>";
+
+        lectureContent.quiz.forEach((q, index) => {
+            const selectedOption = document.querySelector(`input[name="q${index}"]:checked`);
+            const selectedValue = selectedOption ? selectedOption.value : null;
+            const isCorrect = selectedValue === q.answer;
+            if (isCorrect) score++;
+
+            resultHtml += `<br><b>Q${index + 1}.</b> ${q.question}<br>`;
+            resultHtml += `Your Answer: ${selectedValue ? selectedValue + ')' : 'Not answered'}<br>`;
+            resultHtml += `Correct Answer: ${q.answer})<br>`;
+            resultHtml += `Explanation: ${q.explanation}<br>`;
+            resultHtml += isCorrect ? "✅ You are correct.<br>" : "❌ You are incorrect.<br>";
+        });
+
+        resultHtml += `<br>🎯 Your Final Score: ${score}/${totalQuestions}`;
+
+        document.getElementById("resultBox").innerHTML = resultHtml;
+        document.getElementById("resultBox").classList.remove("hidden");
+
+        // Send quiz score to backend
+        sendData({ "Quiz Score": `${score}/${totalQuestions}` });
+    }
+  </script>
+</body>
+</html>
